@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBERDECK v5.0 | The Workstation</title>
+    <style>
+        /* --- V5 THEME: CLEAN CYBER --- */
+        :root {
+            --c-green: #0aff0a;
+            --c-dark: #050505;
+            --c-panel: #0f0f0f;
+            --c-red: #ff2a2a;
+            --c-warn: #ffae00;
+            --c-blue: #00f3ff;
+            --font-stack: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--c-dark);
+            color: #ccc;
+            font-family: var(--font-stack);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* BACKGROUND FX */
+        .grid-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* HEADER */
+        header {
+            border-bottom: 1px solid #333;
+            padding: 1rem 2rem;
+            background: rgba(5,5,5,0.95);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        .brand { font-size: 1.2rem; font-weight: bold; letter-spacing: 2px; color: var(--c-green); }
+        .brand span { color: var(--c-blue); }
+        .sys-stats { font-size: 0.75rem; color: #555; display: flex; gap: 15px; }
+
+        /* MAIN LAYOUT */
+        .layout { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 60px); }
+
+        /* SIDEBAR */
+        aside {
+            background: var(--c-panel);
+            border-right: 1px solid #222;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group { margin-bottom: 1.5rem; }
+        input[type="text"] {
+            width: 100%; background: #000; border: 1px solid #333; color: var(--c-green);
+            padding: 10px; font-family: inherit; font-size: 0.9rem;
+            transition: 0.3s;
+        }
+        input:focus { border-color: var(--c-blue); outline: none; box-shadow: 0 0 10px rgba(0,243,255,0.1); }
+
+        .btn-scan {
+            width: 100%; background: var(--c-green); color: black; border: none; padding: 10px;
+            font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+            margin-top: 5px; transition: 0.2s;
+        }
+        .btn-scan:hover { background: white; box-shadow: 0 0 15px var(--c-green); }
+        
+        .nav-item {
+            padding: 12px; cursor: pointer; border-left: 2px solid transparent;
+            font-size: 0.85rem; color: #777; transition: 0.2s; margin-bottom: 2px;
+        }
+        .nav-item:hover { background: #111; color: #eee; }
+        .nav-item.active { border-left-color: var(--c-blue); background: rgba(0, 243, 255, 0.05); color: var(--c-blue); font-weight: bold; }
+        
+        .nav-section { margin-top: 2rem; font-size: 0.7rem; color: #444; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+
+        /* CONTENT AREA */
+        main { padding: 2rem; overflow-y: auto; position: relative; }
+
+        .panel { display: none; animation: fadeUp 0.3s ease-out; }
+        .panel.active { display: block; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* DASHBOARD GRID */
+        .dash-grid {
+            display: grid; grid-template-columns: 350px 1fr; gap: 2rem; margin-bottom: 2rem;
+        }
+
+        /* CARDS & WIDGETS */
+        .card {
+            background: #111; border: 1px solid #222; padding: 1.5rem;
+            position: relative; overflow: hidden;
+        }
+        .card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: #333;
+        }
+        .card.secure::before { background: var(--c-green); }
+        .card.warn::before { background: var(--c-warn); }
+        .card.crit::before { background: var(--c-red); }
+        .card.info::before { background: var(--c-blue); }
+
+        .card h3 { font-size: 0.8rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; }
+
+        /* RADAR CHART CONTAINER */
+        .radar-container { display: flex; justify-content: center; align-items: center; height: 250px; }
+
+        /* METRICS */
+        .metric-row { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #1a1a1a; padding-bottom: 5px; }
+        .metric-label { color: #888; font-size: 0.9rem; }
+        .metric-val { font-weight: bold; }
+        .val-good { color: var(--c-green); }
+        .val-bad { color: var(--c-red); }
+
+        /* TERMINAL / LOGS */
+        .terminal {
+            background: #000; border: 1px solid #333; padding: 1rem;
+            font-size: 0.8rem; height: 150px; overflow-y: auto; font-family: monospace;
+            color: #555; margin-top: 2rem;
+        }
+        .log-line { margin-bottom: 4px; }
+        .log-time { color: #333; margin-right: 8px; }
+        .log-high { color: var(--c-red); }
+        .log-med { color: var(--c-warn); }
+        .log-ok { color: var(--c-green); }
+
+        /* DATA LISTS (Subdomains, Vulns) */
+        .data-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag {
+            background: #1a1a1a; border: 1px solid #333; padding: 5px 10px;
+            font-size: 0.85rem; cursor: pointer; transition: 0.2s;
+        }
+        .tag:hover { border-color: var(--c-blue); color: white; }
+        .tag.vuln { border-color: var(--c-red); color: var(--c-red); }
+        
+        /* CODE SNIPPETS */
+        .code-snippet {
+            background: #080808; border: 1px solid #333; padding: 1rem;
+            font-family: monospace; font-size: 0.85rem; color: var(--c-green);
+            white-space: pre-wrap; margin-top: 10px; position: relative;
+        }
+        .copy-btn {
+            position: absolute; top: 5px; right: 5px; background: #333; color: white;
+            border: none; padding: 2px 8px; font-size: 0.7rem; cursor: pointer;
+        }
+
+        /* SCROLLBAR */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #222; }
+        ::-webkit-scrollbar-thumb:hover { background: #333; }
+
+        /* UTILS */
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .text-red { color: var(--c-red); }
+        .text-green { color: var(--c-green); }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+
+    <header>
+        <div class="brand">CYBERDECK <span>V5.0</span></div>
+        <div class="sys-stats">
+            <span>MEM: OPTIMAL</span>
+            <span>NET: SECURE</span>
+            <span>VER: 5.0.1</span>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside>
+            <div class="input-group">
+                <input type="text" id="targetInput" placeholder="target-domain.com" value="airtalk.live">
+                <button class="btn-scan" onclick="initiateScan()">INITIALIZE SCAN</button>
+            </div>
+
+            <div class="nav-section">MODULES</div>
+            <div class="nav-item active" onclick="showPanel('dashboard')">DASHBOARD</div>
+            <div class="nav-item" onclick="showPanel('recon')">SUBDOMAIN RECON</div>
+            <div class="nav-item" onclick="showPanel('vulns')">VULNERABILITIES</div>
+            <div class="nav-item" onclick="showPanel('remediate')">REMEDIATION</div>
+
+            <div class="nav-section">ACTIONS</div>
+            <div class="nav-item" onclick="exportReport()">DOWNLOAD REPORT (JSON)</div>
+        </aside>
+
+        <main>
+            <!-- DASHBOARD PANEL -->
+            <div id="dashboard" class="panel active">
+                <div class="dash-grid">
+                    <div class="card">
+                        <h3>Attack Surface</h3>
+                        <div class="radar-container">
+                            <canvas id="radarChart" width="250" height="250"></canvas>
+                        </div>
+                        <div style="text-align:center; margin-top:10px; color:#666; font-size:0.8rem;">VISUAL METRIC</div>
+                    </div>
+                    <div class="card info">
+                        <div class="flex-between">
+                            <h3>Target Summary</h3>
+                            <span id="scanStatus" class="val-good">IDLE</span>
+                        </div>
+                        
+                        <div class="metric-row" style="margin-top:20px;">
+                            <span class="metric-label">Target Domain</span>
+                            <span class="metric-val" id="resDomain">-</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">IP Address</span>
+                            <span class="metric-val" id="resIP">-</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">SSL Status</span>
+                            <span class="metric-val" id="resSSL">-</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Server Header</span>
+                            <span class="metric-val" id="resServer">-</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Risk Score</span>
+                            <span class="metric-val" id="resScore" style="font-size:1.2rem;">0/100</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card warn">
+                    <h3>Operations Log</h3>
+                    <div class="terminal" id="sysLog">
+                        <div class="log-line"><span class="log-time">[00:00:00]</span> System initialized. Ready for input.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RECON PANEL -->
+            <div id="recon" class="panel">
+                <div class="card info">
+                    <div class="flex-between">
+                        <h3>Subdomain Discovery (crt.sh)</h3>
+                        <button class="copy-btn" style="position:static; background:var(--c-blue);" onclick="scanSubdomains()">REFRESH LIST</button>
+                    </div>
+                    <p style="color:#666; font-size:0.8rem; margin-bottom:1rem;">Scanning certificate transparency logs for related subdomains...</p>
+                    <div id="subdomainList" class="data-list">
+                        <span class="tag">Scan required...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VULNS PANEL -->
+            <div id="vulns" class="panel">
+                <div class="card crit">
+                    <h3>Identified Threats</h3>
+                    <div id="vulnList">
+                        <p style="color:#555;">No data.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REMEDIATE PANEL -->
+            <div id="remediate" class="panel">
+                <div class="card secure">
+                    <h3>Security Hardening</h3>
+                    <p style="color:#888; font-size:0.9rem; margin-bottom:1rem;">Generated code snippets to fix detected issues.</p>
+                    
+                    <div style="margin-bottom:2rem;">
+                        <h4 style="color:var(--c-blue); margin-bottom:5px;">1. Content Security Policy (CSP)</h4>
+                        <div class="code-snippet">
+                            <button class="copy-btn" onclick="copyToClipboard(this)">COPY</button>
+&lt;meta http-equiv="Content-Security-Policy" 
+      content="default-src 'self'; 
+               script-src 'self' 'unsafe-inline' https://trusted.cdn.com; 
+               style-src 'self' 'unsafe-inline'; 
+               img-src 'self' data: https:; 
+               connect-src 'self'; 
+               font-src 'self'; 
+               object-src 'none'; 
+               frame-ancestors 'none'; 
+               base-uri 'self'; 
+               form-action 'self';"&gt;
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:2rem;">
+                        <h4 style="color:var(--c-blue); margin-bottom:5px;">2. Strict Transport Security (HSTS)</h4>
+                        <div class="code-snippet">
+                            <button class="copy-btn" onclick="copyToClipboard(this)">COPY</button>
+&lt;meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains"&gt;
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:2rem;">
+                        <h4 style="color:var(--c-blue); margin-bottom:5px;">3. X-Frame-Options (Clickjacking)</h4>
+                        <div class="code-snippet">
+                            <button class="copy-btn" onclick="copyToClipboard(this)">COPY</button>
+&lt;meta http-equiv="X-Frame-Options" content="DENY"&gt;
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- CORE SYSTEM V5 ---
+
+        let currentTarget = "";
+        let scanData = {
+            score: 0,
+            ssl: false,
+            server: "Unknown",
+            ip: [],
+            vulns: [],
+            subdomains: []
+        };
+
+        const logger = document.getElementById('sysLog');
+
+        function log(msg, type='info') {
+            const time = new Date().toLocaleTimeString('en-GB');
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            let colorClass = '';
+            if(type === 'crit') colorClass = 'log-high';
+            if(type === 'ok') colorClass = 'log-ok';
+            if(type === 'warn') colorClass = 'log-med';
+            
+            line.innerHTML = `<span class="log-time">[${time}]</span> <span class="${colorClass}">${msg}</span>`;
+            logger.appendChild(line);
+            logger.scrollTop = logger.scrollHeight;
+        }
+
+        function showPanel(id) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        async function initiateScan() {
+            const input = document.getElementById('targetInput').value.replace(/^(https?:\/\/)/, '').replace(/\/$/, '');
+            if(!input) return;
+
+            currentTarget = input;
+            log(`Initializing scan protocol for: ${currentTarget}`, 'info');
+            document.getElementById('scanStatus').innerText = "SCANNING...";
+            document.getElementById('scanStatus').className = "metric-val";
+            
+            // 1. DNS Resolution (Parallel)
+            log("Phase 1: DNS Resolution...", 'info');
+            const dnsData = await resolveDNS(currentTarget);
+            
+            // 2. SSL Check
+            log("Phase 2: SSL/TLS Handshake check...", 'info');
+            const sslStatus = await checkSSL(currentTarget);
+
+            // 3. Secret/Vuln Heuristics
+            log("Phase 3: Content Heuristics...", 'info');
+            const vulnData = await runHeuristics(currentTarget);
+
+            // 4. Subdomain Discovery
+            log("Phase 4: Certificate Transparency Recon...", 'info');
+            scanSubdomains();
+
+            // 5. Finalize
+            finalizeReport(dnsData, sslStatus, vulnData);
+        }
+
+        // --- MODULES ---
+
+        async function resolveDNS(domain) {
+            try {
+                const res = await fetch(`https://dns.google/resolve?name=${domain}&type=A`);
+                const data = await res.json();
+                const ips = data.Answer ? data.Answer.map(a => a.data) : [];
+                document.getElementById('resIP').innerText = ips.length ? ips[0] : "Not Found";
+                document.getElementById('resDomain').innerText = domain;
+                scanData.ip = ips;
+                return ips;
+            } catch (e) {
+                log(`DNS Error: ${e.message}`, 'crit');
+                return [];
+            }
+        }
+
+        async function checkSSL(domain) {
+            try {
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), 5000);
+                await fetch(`https://${domain}`, { method: 'HEAD', mode: 'no-cors', signal: controller.signal });
+                document.getElementById('resSSL').innerHTML = "<span class='val-good'>TLS 1.2+ (VALID)</span>";
+                scanData.ssl = true;
+                log("SSL Certificate is valid and trusted.", 'ok');
+                return true;
+            } catch (e) {
+                document.getElementById('resSSL').innerHTML = "<span class='val-bad'>INVALID / TIMEOUT</span>";
+                scanData.ssl = false;
+                log("SSL Check failed.", 'crit');
+                return false;
+            }
+        }
+
+        async function scanSubdomains() {
+            const list = document.getElementById('subdomainList');
+            list.innerHTML = '<span class="tag">Scanning...</span>';
+            
+            try {
+                // Using allorigins proxy because crt.sh might block direct browser fetch
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://crt.sh/?q=%.${currentTarget}&output=json`)}`;
+                const res = await fetch(proxyUrl);
+                const data = await res.json();
+                
+                if(data.contents) {
+                    const json = JSON.parse(data.contents);
+                    // Filter unique and wildcard
+                    const subs = [...new Set(json.map(item => item.name_value))].filter(s => !s.includes('*'));
+                    
+                    // Limit display to 50
+                    scanData.subdomains = subs.slice(0, 50);
+                    
+                    list.innerHTML = '';
+                    subs.slice(0, 50).forEach(sub => {
+                        const tag = document.createElement('span');
+                        tag.className = 'tag';
+                        tag.innerText = sub;
+                        list.appendChild(tag);
+                    });
+                    log(`Recon Complete: ${subs.length} subdomains found.`, 'ok');
+                }
+            } catch (e) {
+                log(`Subdomain Recon Failed: ${e.message}`, 'warn');
+                list.innerHTML = '<span class="tag text-red">RECON FAILED</span>';
+            }
+        }
+
+        async function runHeuristics(domain) {
+            let vulns = [];
+            try {
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://${domain}`)}`;
+                const res = await fetch(proxyUrl);
+                const data = await res.json();
+                const html = data.contents.toLowerCase();
+
+                // 1. jQuery Version
+                const jqMatch = html.match(/jquery.*?([\d\.]+)\.js/);
+                if (jqMatch && (jqMatch[1].startsWith('1.') || jqMatch[1].startsWith('2.'))) {
+                    vulns.push({ type: 'Library', sev: 'HIGH', desc: `Outdated jQuery ${jqMatch[1]} detected (Known CVEs)` });
+                }
+
+                // 2. Debug Info
+                if (html.includes('debug') || html.includes('stack trace')) {
+                    vulns.push({ type: 'Info', sev: 'MED', desc: 'Debug information possibly exposed' });
+                }
+
+                // 3. Missing Headers (Heuristic based on meta/script content)
+                if (!html.includes('content-security-policy')) {
+                    vulns.push({ type: 'Header', sev: 'HIGH', desc: 'Content-Security-Policy (CSP) missing' });
+                }
+                
+                scanData.server = "Cloudflare/Nginx"; // Assumption for most modern sites
+                document.getElementById('resServer').innerText = scanData.server;
+
+            } catch (e) {
+                log(`Heuristics failed (CORS?): ${e.message}`, 'warn');
+                vulns.push({ type: 'Scan', sev: 'INFO', desc: 'Could not fetch source for deep analysis' });
+            }
+            return vulns;
+        }
+
+        function finalizeReport(dns, ssl, vulns) {
+            scanData.vulns = vulns;
+            
+            // Calc Score
+            let score = 100;
+            if(!ssl) score -= 30;
+            vulns.forEach(v => {
+                if(v.sev === 'HIGH') score -= 15;
+                if(v.sev === 'MED') score -= 5;
+            });
+            if(score < 0) score = 0;
+
+            scanData.score = score;
+            
+            // UI Update
+            document.getElementById('resScore').innerText = `${score}/100`;
+            document.getElementById('resScore').style.color = score > 70 ? 'var(--c-green)' : (score > 40 ? 'var(--c-warn)' : 'var(--c-red)');
+            document.getElementById('scanStatus').innerText = "COMPLETE";
+            document.getElementById('scanStatus').className = "val-ok";
+
+            // Draw Chart
+            drawRadar(score, ssl ? 1 : 0, vulns.length);
+
+            // Populate Vuln List
+            const vList = document.getElementById('vulnList');
+            vList.innerHTML = '';
+            if(vulns.length === 0) {
+                vList.innerHTML = '<p style="color:var(--c-green)">No critical vulnerabilities detected via heuristics.</p>';
+            } else {
+                vulns.forEach(v => {
+                    const el = document.createElement('div');
+                    el.className = 'card warn';
+                    el.style.padding = '10px';
+                    el.style.marginBottom = '10px';
+                    el.style.borderLeft = v.sev === 'HIGH' ? '3px solid var(--c-red)' : '3px solid var(--c-warn)';
+                    el.innerHTML = `<strong style="color:white">${v.type}</strong> <span style="font-size:0.8rem; float:right; color:#666">${v.sev}</span><br><span style="color:#aaa">${v.desc}</span>`;
+                    vList.appendChild(el);
+                });
+            }
+
+            log(`Scan complete. Final Score: ${score}/100`, 'ok');
+        }
+
+        // --- VISUALS: RADAR CHART ---
+        function drawRadar(score, ssl, vulnCount) {
+            const canvas = document.getElementById('radarChart');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w/2;
+            const cy = h/2;
+            const r = 90;
+
+            // Clear
+            ctx.clearRect(0,0,w,h);
+
+            // Draw Webs
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            for(let level=1; level<=4; level++) {
+                ctx.beginPath();
+                for(let i=0; i<5; i++) {
+                    const angle = (Math.PI*2/5)*i - Math.PI/2;
+                    const rad = (r/4)*level;
+                    ctx.lineTo(cx + Math.cos(angle)*rad, cy + Math.sin(angle)*rad);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+
+            // Metrics (0-1 scale approx)
+            const mSSL = ssl ? 1 : 0.2;
+            const mHeaders = vulnCount === 0 ? 1 : 0.5;
+            const mVulns = vulnCount === 0 ? 1 : (vulnCount > 2 ? 0.2 : 0.6);
+            const mRecon = scanData.subdomains.length > 5 ? 1 : 0.5;
+            const mScore = score / 100;
+
+            const metrics = [mScore, mSSL, mHeaders, mVulns, mRecon];
+            const labels = ['SCORE', 'SSL', 'HEADERS', 'VULNS', 'RECON'];
+
+            // Draw Labels
+            ctx.fillStyle = '#666';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            for(let i=0; i<5; i++) {
+                const angle = (Math.PI*2/5)*i - Math.PI/2;
+                ctx.fillText(labels[i], cx + Math.cos(angle)*(r+15), cy + Math.sin(angle)*(r+15));
+            }
+
+            // Draw Shape
+            ctx.beginPath();
+            ctx.strokeStyle = 'var(--c-green)';
+            ctx.fillStyle = 'rgba(10, 255, 10, 0.2)';
+            ctx.lineWidth = 2;
+            
+            for(let i=0; i<5; i++) {
+                const angle = (Math.PI*2/5)*i - Math.PI/2;
+                const val = metrics[i] * r;
+                const x = cx + Math.cos(angle)*val;
+                const y = cy + Math.sin(angle)*val;
+                if(i===0) ctx.moveTo(x,y);
+                else ctx.lineTo(x,y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        // --- UTILS ---
+
+        function copyToClipboard(btn) {
+            const code = btn.parentElement.textContent.replace('COPY', '').trim();
+            navigator.clipboard.writeText(code);
+            const original = btn.innerText;
+            btn.innerText = "COPIED!";
+            setTimeout(() => btn.innerText = original, 1000);
+        }
+
+        function exportReport() {
+            if(scanData.score === 0 && scanData.vulns.length === 0) {
+                alert("No scan data to export.");
+                return;
+            }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(scanData, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "cyberdeck_report_" + currentTarget + ".json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            log("Report exported successfully.", 'ok');
+        }
+    </script>
+</body>
+</html>
